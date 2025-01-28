@@ -92,8 +92,8 @@ use core::str;
 use std::error::Error as StdError;
 
 mod ser;
-use ser::{Cursor, Serialize};
-pub use ser::{Label, LabelSegment};
+use ser::{Cursor, Deserialize};
+pub use ser::{Label, LabelSegment, Serialize};
 
 /// Macro to implement `Serialize` for a struct.
 macro_rules! serialize {
@@ -130,7 +130,9 @@ macro_rules! serialize {
                 )*
                 Ok(index)
             }
+        }
 
+        impl<'a> Deserialize<'a> for $name $(<$lt>)? {
             fn deserialize(&mut self, mut cursor: Cursor<'a>) -> Result<Cursor<'a>, Error> {
                 $(
                     cursor = self.$field.deserialize(cursor)?;
@@ -192,7 +194,9 @@ macro_rules! num_enum {
                 let value: u16 = (*self).into();
                 value.serialize(cursor)
             }
+        }
 
+        impl<'a> Deserialize<'a> for $name {
             fn deserialize(&mut self, cursor: Cursor<'a>) -> Result<Cursor<'a>, Error> {
                 let mut value = 0;
                 let cursor = value.deserialize(cursor)?;
@@ -538,10 +542,12 @@ impl<'arrays, 'innards> Serialize<'innards> for Message<'arrays, 'innards> {
         }
         Ok(offset)
     }
+}
 
+impl<'arrays, 'innards> Deserialize<'innards> for Message<'arrays, 'innards> {
     fn deserialize(&mut self, cursor: Cursor<'innards>) -> Result<Cursor<'innards>, Error> {
         /// Read a set of `T`, bounded by `count`.
-        fn try_read_set<'a, T: Serialize<'a>>(
+        fn try_read_set<'a, T: Deserialize<'a>>(
             mut cursor: Cursor<'a>,
             count: usize,
             items: &mut [T],
@@ -774,7 +780,9 @@ impl<'a> Serialize<'a> for ResourceData<'a> {
 
         Ok(len)
     }
+}
 
+impl<'a> Deserialize<'a> for ResourceData<'a> {
     fn deserialize(&mut self, cursor: Cursor<'a>) -> Result<Cursor<'a>, Error> {
         // Deserialize a u16 for the length
         let mut len = 0u16;
@@ -979,7 +987,9 @@ impl<'a> Serialize<'a> for Flags {
     fn serialize(&self, buf: &mut [u8]) -> Result<usize, Error> {
         self.0.serialize(buf)
     }
+}
 
+impl<'a> Deserialize<'a> for Flags {
     fn deserialize(&mut self, bytes: Cursor<'a>) -> Result<Cursor<'a>, Error> {
         u16::deserialize(&mut self.0, bytes)
     }

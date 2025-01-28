@@ -20,14 +20,17 @@ use core::num::NonZeroUsize;
 
 use memchr::Memchr;
 
-/// An object that is able to be serialized to or deserialized from a series of bytes.
-pub(crate) trait Serialize<'a> {
+/// An object that is able to be serialized to a series of bytes.
+pub trait Serialize<'a> {
     /// The number of bytes needed to serialize this object.
     fn serialized_len(&self) -> usize;
 
     /// Serialize this object into a series of bytes.
     fn serialize(&self, bytes: &mut [u8]) -> Result<usize, Error>;
+}
 
+/// An object that is able to be deserialized from a series of bytes.
+pub(crate) trait Deserialize<'a> {
     /// Deserialize this object from a series of bytes.
     fn deserialize(&mut self, cursor: Cursor<'a>) -> Result<Cursor<'a>, Error>;
 }
@@ -107,7 +110,9 @@ impl<'a> Serialize<'a> for () {
     fn serialize(&self, _bytes: &mut [u8]) -> Result<usize, Error> {
         Ok(0)
     }
+}
 
+impl<'a> Deserialize<'a> for () {
     fn deserialize(&mut self, bytes: Cursor<'a>) -> Result<Cursor<'a>, Error> {
         Ok(bytes)
     }
@@ -298,7 +303,9 @@ impl<'a> Serialize<'a> for Label<'a> {
             Ok(offset)
         })
     }
+}
 
+impl<'a> Deserialize<'a> for Label<'a> {
     fn deserialize(&mut self, cursor: Cursor<'a>) -> Result<Cursor<'a>, Error> {
         let original = cursor.original();
         let start = cursor.cursor;
@@ -459,7 +466,9 @@ impl<'a> Serialize<'a> for LabelSegment<'a> {
             }
         }
     }
+}
 
+impl<'a> Deserialize<'a> for LabelSegment<'a> {
     fn deserialize(&mut self, cursor: Cursor<'a>) -> Result<Cursor<'a>, Error> {
         // The type is determined by the first byte.
         let b1 = *cursor
@@ -518,7 +527,9 @@ macro_rules! serialize_num {
 
                     Ok(mem::size_of::<$num_ty>())
                 }
+            }
 
+            impl<'a> Deserialize<'a> for $num_ty {
                 fn deserialize(&mut self, bytes: Cursor<'a>) -> Result<Cursor<'a>, Error> {
                     if bytes.len() < mem::size_of::<$num_ty>() {
                         return Err(bytes.read_error(mem::size_of::<$num_ty>()));
