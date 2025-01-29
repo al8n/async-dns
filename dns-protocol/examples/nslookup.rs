@@ -9,8 +9,8 @@ use std::net::Ipv4Addr;
 use std::net::{IpAddr, UdpSocket};
 use std::process;
 
-use dns_protocol::Flags;
-use dns_protocol::{Message, Question, ResourceRecord, ResourceType};
+use dns_protocol_patch::Flags;
+use dns_protocol_patch::{Message, Question, ResourceRecord, ResourceType};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The first argument is the name to lookup.

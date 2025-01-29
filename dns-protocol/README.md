@@ -1,3 +1,5 @@
+> This is a temp patch from PR #5 of https://github.com/notgull/async-dns/tree/master/dns-protocol
+
 # dns-protocol
 
 This crate provides a `no_std` implementation of the DNS protocol.
