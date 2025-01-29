@@ -30,7 +30,7 @@ pub trait Serialize<'a> {
 }
 
 /// An object that is able to be deserialized from a series of bytes.
-pub(crate) trait Deserialize<'a> {
+pub trait Deserialize<'a> {
     /// Deserialize this object from a series of bytes.
     fn deserialize(&mut self, cursor: Cursor<'a>) -> Result<Cursor<'a>, Error>;
 }
@@ -39,7 +39,7 @@ pub(crate) trait Deserialize<'a> {
 ///
 /// This keeps track of how many bytes that we have already consumed, while also providing the original buffer.
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct Cursor<'a> {
+pub struct Cursor<'a> {
     /// The bytes being read.
     bytes: &'a [u8],
 
@@ -49,27 +49,28 @@ pub(crate) struct Cursor<'a> {
 
 impl<'a> Cursor<'a> {
     /// Create a new cursor from a series of bytes.
-    pub(crate) fn new(bytes: &'a [u8]) -> Self {
+    pub fn new(bytes: &'a [u8]) -> Self {
         Self { bytes, cursor: 0 }
     }
 
     /// Get the original bytes that this cursor was created from.
-    pub(crate) fn original(&self) -> &'a [u8] {
+    pub fn original(&self) -> &'a [u8] {
         self.bytes
     }
 
     /// Get the slice of remaining bytes.
-    pub(crate) fn remaining(&self) -> &'a [u8] {
+    pub fn remaining(&self) -> &'a [u8] {
         &self.bytes[self.cursor..]
     }
 
     /// Get the length of the slice of remaining bytes.
-    pub(crate) fn len(&self) -> usize {
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
         self.bytes.len() - self.cursor
     }
 
     /// Get a new cursor at the given absolute position.
-    pub(crate) fn at(&self, pos: usize) -> Self {
+    pub fn at(&self, pos: usize) -> Self {
         Self {
             bytes: self.bytes,
             cursor: pos,
@@ -77,7 +78,7 @@ impl<'a> Cursor<'a> {
     }
 
     /// Advance the cursor by the given number of bytes.
-    pub(crate) fn advance(mut self, n: usize) -> Result<Self, Error> {
+    pub fn advance(mut self, n: usize) -> Result<Self, Error> {
         if n == 0 {
             return Ok(self);
         }
