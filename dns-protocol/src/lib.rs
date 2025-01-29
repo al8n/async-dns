@@ -92,8 +92,7 @@ use core::str;
 use std::error::Error as StdError;
 
 mod ser;
-use ser::{Cursor, Deserialize};
-pub use ser::{Label, LabelSegment, Serialize};
+pub use ser::{Cursor, Deserialize, Label, LabelSegment, Serialize};
 
 /// Macro to implement `Serialize` for a struct.
 macro_rules! serialize {
