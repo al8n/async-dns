@@ -88,8 +88,7 @@ use core::mem;
 use core::num::NonZeroUsize;
 use core::str;
 
-#[cfg(feature = "std")]
-use std::error::Error as StdError;
+use core::error::Error as StdError;
 
 mod ser;
 pub use ser::{Cursor, Deserialize, Label, LabelSegment, Serialize};
@@ -206,6 +205,23 @@ macro_rules! num_enum {
     };
 }
 
+/// The buffer type when dealing with DNS messages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::IsVariant, derive_more::Display)]
+pub enum BufferType {
+    /// The question buffer.
+    #[display("question")]
+    Question,
+    /// The answer buffer.
+    #[display("answer")]
+    Answer,
+    /// The authority buffer.
+    #[display("authority")]
+    Authority,
+    /// The additional buffer.
+    #[display("additional")]
+    Additional,
+}
+
 /// An error that may occur while using the DNS protocol.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -221,7 +237,7 @@ pub enum Error {
         available: usize,
 
         /// The type of the buffer that we tried to write to.
-        buffer_type: &'static str,
+        buffer_type: BufferType,
     },
 
     /// We attempted to read from a buffer, but we ran out of room before we could read the entire
@@ -246,7 +262,7 @@ pub enum Error {
     NameTooLong(usize),
 
     /// We could not create a valid UTF-8 string from the bytes we read.
-    InvalidUtf8(str::Utf8Error),
+    InvalidUtf8(simdutf8::compat::Utf8Error),
 
     /// We could not convert a raw number to a code.
     InvalidCode(InvalidCode),
@@ -298,19 +314,17 @@ impl fmt::Display for Error {
     }
 }
 
-#[cfg(feature = "std")]
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            Error::InvalidUtf8(err) => Some(err),
             Error::InvalidCode(err) => Some(err),
             _ => None,
         }
     }
 }
 
-impl From<str::Utf8Error> for Error {
-    fn from(err: str::Utf8Error) -> Self {
+impl From<simdutf8::compat::Utf8Error> for Error {
+    fn from(err: simdutf8::compat::Utf8Error) -> Self {
         Error::InvalidUtf8(err)
     }
 }
@@ -514,7 +528,7 @@ impl<'arrays, 'innards> Message<'arrays, 'innards> {
     }
 }
 
-impl<'arrays, 'innards> Serialize<'innards> for Message<'arrays, 'innards> {
+impl<'innards> Serialize<'innards> for Message<'_, 'innards> {
     fn serialized_len(&self) -> usize {
         iter::once(self.header.serialized_len())
             .chain(self.questions().iter().map(Serialize::serialized_len))
@@ -543,14 +557,14 @@ impl<'arrays, 'innards> Serialize<'innards> for Message<'arrays, 'innards> {
     }
 }
 
-impl<'arrays, 'innards> Deserialize<'innards> for Message<'arrays, 'innards> {
+impl<'innards> Deserialize<'innards> for Message<'_, 'innards> {
     fn deserialize(&mut self, cursor: Cursor<'innards>) -> Result<Cursor<'innards>, Error> {
         /// Read a set of `T`, bounded by `count`.
         fn try_read_set<'a, T: Deserialize<'a>>(
             mut cursor: Cursor<'a>,
             count: usize,
             items: &mut [T],
-            name: &'static str,
+            ty: BufferType,
         ) -> Result<Cursor<'a>, Error> {
             let len = items.len();
 
@@ -564,7 +578,7 @@ impl<'arrays, 'innards> Deserialize<'innards> for Message<'arrays, 'innards> {
                     .ok_or_else(|| Error::NotEnoughWriteSpace {
                         tried_to_write: NonZeroUsize::new(count).unwrap(),
                         available: len,
-                        buffer_type: name,
+                        buffer_type: ty,
                     })?
                     .deserialize(cursor)?;
             }
@@ -584,25 +598,25 @@ impl<'arrays, 'innards> Deserialize<'innards> for Message<'arrays, 'innards> {
             cursor,
             self.header.question_count as usize,
             self.questions,
-            "Question",
+            BufferType::Question,
         )?;
         let cursor = try_read_set(
             cursor,
             self.header.answer_count as usize,
             self.answers,
-            "Answer",
+            BufferType::Answer,
         )?;
         let cursor = try_read_set(
             cursor,
             self.header.authority_count as usize,
             self.authorities,
-            "Authority",
+            BufferType::Authority,
         )?;
         let cursor = try_read_set(
             cursor,
             self.header.additional_count as usize,
             self.additional,
-            "Additional",
+            BufferType::Additional,
         )?;
 
         Ok(cursor)
@@ -978,7 +992,7 @@ impl fmt::Debug for Flags {
     }
 }
 
-impl<'a> Serialize<'a> for Flags {
+impl Serialize<'_> for Flags {
     fn serialized_len(&self) -> usize {
         2
     }
@@ -1391,7 +1405,6 @@ impl fmt::Display for InvalidCode {
     }
 }
 
-#[cfg(feature = "std")]
 impl StdError for InvalidCode {}
 
 #[cfg(test)]

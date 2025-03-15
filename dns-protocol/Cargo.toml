@@ -1,17 +1,19 @@
 [package]
 name = "dns-protocol-patch"
-version = "0.1.3"
-edition = "2018"
+version = "0.1.4"
+edition = "2021"
 authors = ["John Nunley <jtnunley01@gmail.com>"]
 description = "A DNS protocol implementation in Rust"
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/notgull/async-dns/tree/master/dns-protocol#readme"
 repository = "https://github.com/notgull/async-dns"
-rust-version = "1.63"
+rust-version = "1.81"
 
 [dependencies]
-memchr = { version = "2.5.0", default-features = false }
+derive_more = { version = "2", features = ["is_variant", "display"] }
+memchr = { version = "2", default-features = false }
+simdutf8 = { version = "0.1", default-features = false }
 
 [features]
 default = ["std"]
-std = []
+std = ["simdutf8/default"]

@@ -103,7 +103,7 @@ impl<'a> Cursor<'a> {
     }
 }
 
-impl<'a> Serialize<'a> for () {
+impl Serialize<'_> for () {
     fn serialized_len(&self) -> usize {
         0
     }
@@ -162,7 +162,7 @@ impl Default for Label<'_> {
     }
 }
 
-impl<'a, 'b> PartialEq<Label<'a>> for Label<'b> {
+impl<'a> PartialEq<Label<'a>> for Label<'_> {
     fn eq(&self, other: &Label<'a>) -> bool {
         self.segments().eq(other.segments())
     }
@@ -170,7 +170,7 @@ impl<'a, 'b> PartialEq<Label<'a>> for Label<'b> {
 
 impl Eq for Label<'_> {}
 
-impl<'a, 'b> PartialOrd<Label<'a>> for Label<'b> {
+impl<'a> PartialOrd<Label<'a>> for Label<'_> {
     fn partial_cmp(&self, other: &Label<'a>) -> Option<core::cmp::Ordering> {
         self.segments().partial_cmp(other.segments())
     }
@@ -503,7 +503,7 @@ impl<'a> Deserialize<'a> for LabelSegment<'a> {
                 .map_err(|_| cursor.read_error(len + 1))?;
 
             // Parse as UTF8
-            let s = core::str::from_utf8(bytes)?;
+            let s = simdutf8::compat::from_utf8(bytes)?;
             *self = Self::String(s);
             cursor.advance(len + 1)
         }
